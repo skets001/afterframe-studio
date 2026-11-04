@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parsePairing, pairingCode, randomToken, isValidJob, allowedMediaURL, escapeHTML, slugify, MAX_VIDEO } from '../src/core.js';
 import { FileReceiver, sendFile } from '../src/transfer.js';
+import { pack, unpack } from 'peerjs-js-binarypack';
 
 test('pairing round-trips while malformed or truncated invitations are rejected',()=>{
   const token=randomToken();const peer='8afb6e09-3061-4100-a29e-984bc755e247';
@@ -39,6 +40,20 @@ test('corrupted transfers never reach the saved-file handler',async()=>{
   let saved=false;const errors=[];const receiver=new FileReceiver(()=>{saved=true;},e=>errors.push(e.message));
   for(const packet of packets)await receiver.accept(packet);
   assert.equal(saved,false);assert.ok(errors.some(message=>message.includes('verification failed')));
+});
+test('PeerJS chunk reassembly can return typed-array payloads without corrupting files',async()=>{
+  const packets=[];const original=new Blob([crypto.getRandomValues(new Uint8Array(60000))],{type:'image/jpeg'});
+  await sendFile({open:true,send:packet=>packets.push(packet)},original,{kind:'painting'});
+  const errors=[];let saved;
+  const receiver=new FileReceiver(blob=>{saved=blob;},error=>errors.push(error.message));
+  for(const packet of packets){
+    const packed=await pack(packet);
+    // PeerJS returns a Uint8Array after reassembling messages above its 16,300-byte MTU.
+    const transported=unpack(packed.byteLength>16300?new Uint8Array(packed):packed);
+    await receiver.accept(transported);
+  }
+  assert.deepEqual(errors,[]);
+  assert.deepEqual(await saved.arrayBuffer(),await original.arrayBuffer());
 });
 test('oversized and out-of-order incoming transfers are rejected',async()=>{
   const errors=[];let saved=false;const receiver=new FileReceiver(()=>{saved=true;},e=>errors.push(e.message));

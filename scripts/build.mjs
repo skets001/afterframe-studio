@@ -4,7 +4,7 @@ import { mkdir, writeFile, copyFile } from 'node:fs/promises';
 const metadata = `// ==UserScript==
 // @name         Afterframe — Gemini phone engine
 // @namespace    https://github.com/skets001/afterframe-studio
-// @version      0.1.0
+// @version      0.1.1
 // @description  Pair your own Gemini browser with Afterframe to prepare living-painting videos. Experimental UI automation with visible controls.
 // @match        https://gemini.google.com/*
 // @run-at       document-idle

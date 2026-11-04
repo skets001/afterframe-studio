@@ -30,7 +30,9 @@ export class FileReceiver {
         const file = this.files.get(message.id);
         if (!file || Date.now() - file.started > 180000) throw new Error('Unknown or expired file transfer.');
         if (message.type === 'file-chunk') {
-          const data = message.data;
+          // PeerJS yields typed-array views after its own large-message reassembly.
+          const raw = message.data;
+          const data = ArrayBuffer.isView(raw) ? raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength) : raw;
           if (!(data instanceof ArrayBuffer) || data.byteLength > CHUNK_SIZE || message.offset !== file.received || file.received + data.byteLength > file.size) throw new Error('Invalid file chunk.');
           file.parts.push(data); file.received += data.byteLength; this.onProgress(file.received / file.size, file.metadata);
         } else if (message.type === 'file-end') {
