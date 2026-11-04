@@ -1,0 +1,9 @@
+node_modules/
+dist/
+public/afterframe.user.js
+public/viewer-runtime.js
+.npm-cache/
+.local/
+*.log
+.env*
+!.env.example
